@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use winit::{
     application::ApplicationHandler,
     dpi::PhysicalPosition,
@@ -6,15 +8,18 @@ use winit::{
     window::{Window, WindowAttributes, WindowId, WindowLevel},
 };
 
+use crate::graphics::Graphics;
+
+mod graphics;
 mod plat;
 
 pub struct Wallflower {
-    window: Option<Window>,
+    graphics: Option<Graphics>,
 }
 
 impl Default for Wallflower {
     fn default() -> Self {
-        Self { window: None }
+        Self { graphics: None }
     }
 }
 
@@ -40,7 +45,7 @@ impl ApplicationHandler for Wallflower {
             .unwrap();
         plat::cfg_window_platform(&window);
         window.set_outer_position(PhysicalPosition::new(0, 0));
-        self.window = Some(window);
+        self.graphics = Some(graphics::init_graphics(event_loop, window).unwrap());
     }
 
     fn window_event(
@@ -54,9 +59,10 @@ impl ApplicationHandler for Wallflower {
                 println!("Exiting!");
                 event_loop.exit();
             }
-            WindowEvent::RedrawRequested => {
-                self.window.as_ref().unwrap().request_redraw();
-            }
+            WindowEvent::RedrawRequested => match &self.graphics {
+                Some(gfx) => gfx.request_redraw(),
+                None => println!("Redraw requested but graphics not initialized!"),
+            },
             _ => (),
         }
     }
