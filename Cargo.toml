@@ -4,3 +4,12 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+smol = "2.0.2"
+wgpu = "30.0.1"
+winit = { version = "0.30.13", features = ["rwh_04"] }
+
+# only needed for macOS
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2-core-graphics = "0.3.2"
+objc2 = "0.6.5"
+objc2-app-kit = "0.3.2"
