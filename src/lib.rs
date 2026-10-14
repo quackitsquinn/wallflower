@@ -1,10 +1,12 @@
 use winit::{
     application::ApplicationHandler,
-    dpi::{PhysicalPosition, Position},
+    dpi::PhysicalPosition,
     event::WindowEvent,
     event_loop::ActiveEventLoop,
-    window::{Window, WindowAttributes, WindowButtons, WindowId, WindowLevel},
+    window::{Window, WindowAttributes, WindowId, WindowLevel},
 };
+
+mod plat;
 
 pub struct Wallflower {
     window: Option<Window>,
@@ -26,49 +28,9 @@ fn background_window_attribs(el: &ActiveEventLoop) -> WindowAttributes {
     let size = monitor.size();
     wa = wa.with_inner_size(size);
 
-    #[cfg(target_os = "macos")]
-    {
-        wa = cfg_window_attribute_macos(wa)
-    }
+    wa = plat::cfg_window_attrib_platform(wa);
 
     wa
-}
-
-#[cfg(target_os = "macos")]
-fn cfg_window_attribute_macos(window_attrib: WindowAttributes) -> WindowAttributes {
-    use winit::platform::macos::WindowAttributesExtMacOS;
-
-    window_attrib
-        .with_title_hidden(true)
-        .with_titlebar_transparent(true)
-        .with_fullsize_content_view(true)
-}
-
-#[cfg(target_os = "macos")]
-fn cfg_window_macos(window: &Window) {
-    use std::mem;
-
-    use objc2::rc::Retained;
-    use objc2_app_kit::{NSView, NSWindowCollectionBehavior, NSWindowStyleMask};
-    use objc2_core_graphics::{CGWindowLevelForKey, CGWindowLevelKey};
-    use wgpu::rwh::{HasDisplayHandle, HasWindowHandle, RawWindowHandle};
-
-    let handle = window.window_handle().unwrap().as_raw();
-    let handle = match handle {
-        RawWindowHandle::AppKit(handle) => handle,
-        _ => panic!("Expected AppKit window handle"),
-    };
-
-    let view = unsafe { Retained::retain(handle.ns_view.as_ptr() as *mut NSView).unwrap() };
-    let ns_window = view.window().unwrap();
-    ns_window.setStyleMask(NSWindowStyleMask::Borderless);
-    ns_window.setCollectionBehavior(
-        NSWindowCollectionBehavior::CanJoinAllSpaces
-            | NSWindowCollectionBehavior::Stationary
-            | NSWindowCollectionBehavior::IgnoresCycle,
-    );
-    ns_window.setLevel(CGWindowLevelForKey(CGWindowLevelKey::DesktopWindowLevelKey) as isize);
-    ns_window.setIgnoresMouseEvents(true);
 }
 
 impl ApplicationHandler for Wallflower {
@@ -76,7 +38,7 @@ impl ApplicationHandler for Wallflower {
         let window = event_loop
             .create_window(background_window_attribs(event_loop))
             .unwrap();
-        cfg_window_macos(&window);
+        plat::cfg_window_platform(&window);
         window.set_outer_position(PhysicalPosition::new(0, 0));
         self.window = Some(window);
     }
