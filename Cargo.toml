@@ -8,8 +8,10 @@ anyhow = "1.0.104"
 env_logger = "0.11.11"
 log = "0.4.34"
 smol = "2.0.2"
-wgpu = "30.0.1"
+w = { version = "30.0.1", package = "wgpu" }
 winit = { version = "0.30.13", features = ["rwh_04"] }
+glm = { package = "nalgebra-glm", version = "0.21.0" }
+image = "0.25.10"
 
 # only needed for macOS
 [target.'cfg(target_os = "macos")'.dependencies]

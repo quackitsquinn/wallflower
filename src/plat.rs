@@ -15,7 +15,7 @@ fn cfg_window_macos(window: &Window) {
     use objc2::rc::Retained;
     use objc2_app_kit::{NSView, NSWindowCollectionBehavior, NSWindowStyleMask};
     use objc2_core_graphics::{CGWindowLevelForKey, CGWindowLevelKey};
-    use wgpu::rwh::{HasWindowHandle, RawWindowHandle};
+    use w::rwh::{HasWindowHandle, RawWindowHandle};
 
     let handle = window.window_handle().unwrap().as_raw();
     let handle = match handle {

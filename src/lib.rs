@@ -60,7 +60,7 @@ impl ApplicationHandler for Wallflower {
                 event_loop.exit();
             }
             WindowEvent::RedrawRequested => match &self.graphics {
-                Some(gfx) => gfx.request_redraw(),
+                Some(gfx) => gfx.request_redraw().expect("redraw failed!"),
                 None => println!("Redraw requested but graphics not initialized!"),
             },
             _ => (),
