@@ -1,5 +1,6 @@
-use std::rc::Rc;
+use std::{rc::Rc, sync::Arc};
 
+use petal::Graphics;
 use winit::{
     application::ApplicationHandler,
     dpi::PhysicalPosition,
@@ -8,19 +9,12 @@ use winit::{
     window::{Window, WindowAttributes, WindowId, WindowLevel},
 };
 
-use crate::graphics::Graphics;
-
-mod graphics;
 mod plat;
 
+#[derive(Default)]
 pub struct Wallflower {
+    window: Option<Arc<Window>>,
     graphics: Option<Graphics>,
-}
-
-impl Default for Wallflower {
-    fn default() -> Self {
-        Self { graphics: None }
-    }
 }
 
 fn background_window_attribs(el: &ActiveEventLoop) -> WindowAttributes {
@@ -32,7 +26,6 @@ fn background_window_attribs(el: &ActiveEventLoop) -> WindowAttributes {
     let monitor = el.primary_monitor().unwrap();
     let size = monitor.size();
     wa = wa.with_inner_size(size);
-
     wa = plat::cfg_window_attrib_platform(wa);
 
     wa
@@ -45,7 +38,10 @@ impl ApplicationHandler for Wallflower {
             .unwrap();
         plat::cfg_window_platform(&window);
         window.set_outer_position(PhysicalPosition::new(0, 0));
-        self.graphics = Some(graphics::init_graphics(event_loop, window).unwrap());
+        let window = Arc::new(window);
+        self.graphics =
+            Some(petal::init_graphics(window.clone(), window.inner_size().into()).unwrap());
+        self.window = Some(window);
     }
 
     fn window_event(
@@ -60,7 +56,7 @@ impl ApplicationHandler for Wallflower {
                 event_loop.exit();
             }
             WindowEvent::RedrawRequested => match &self.graphics {
-                Some(gfx) => gfx.request_redraw().expect("redraw failed!"),
+                Some(gfx) => gfx.render_frame().expect("redraw failed!"),
                 None => println!("Redraw requested but graphics not initialized!"),
             },
             _ => (),

@@ -8,23 +8,27 @@ pub struct DisplaySurface {
     data: Arc<(w::Surface<'static>, w::SurfaceConfiguration)>,
 }
 
+pub struct DisplaySurfaceConfig {
+    pub width: u32,
+    pub height: u32,
+    pub format: w::TextureFormat,
+}
+
 impl DisplaySurface {
     pub fn init(
         adapter: &w::Adapter,
         device: w::Device,
         surface: w::Surface<'static>,
-        wind: Arc<Window>,
+        size: (u32, u32),
     ) -> anyhow::Result<Self> {
-        let size = wind.inner_size();
-
         let surface_caps = surface.get_capabilities(adapter);
         let surface_format = surface_caps.formats[0];
 
         let config = w::SurfaceConfiguration {
             usage: w::TextureUsages::RENDER_ATTACHMENT,
             format: surface_format,
-            width: size.width,
-            height: size.height,
+            width: size.0,
+            height: size.1,
             present_mode: surface_caps.present_modes[0],
             alpha_mode: surface_caps.alpha_modes[0],
             view_formats: vec![],
@@ -63,7 +67,9 @@ impl DisplaySurface {
     }
 
     /// Returns a texture view of the current surface texture, if available.
-    pub fn current_texture_view(&self) -> anyhow::Result<Option<w::TextureView>> {
+    pub fn current_texture_view(
+        &self,
+    ) -> anyhow::Result<Option<(w::SurfaceTexture, w::TextureView)>> {
         let txt = self.current_texture()?;
         let txt = match txt {
             Some(txt) => txt,
@@ -72,6 +78,6 @@ impl DisplaySurface {
         let view = txt
             .texture
             .create_view(&w::TextureViewDescriptor::default());
-        Ok(Some(view))
+        Ok(Some((txt, view)))
     }
 }

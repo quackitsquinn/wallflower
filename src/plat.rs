@@ -37,10 +37,10 @@ fn cfg_window_macos(window: &Window) {
 
 pub fn cfg_window_platform(window: &Window) {
     #[cfg(target_os = "macos")]
-    cfg_window_macos(window);
+    return cfg_window_macos(window);
 
     #[cfg(not(target_os = "macos"))]
-    compile_error!("cfg_window_platform is only implemented for macOS");
+    return panic!("cfg_window_platform is only implemented for macOS");
 }
 
 pub fn cfg_window_attrib_platform(window_attrib: WindowAttributes) -> WindowAttributes {
@@ -48,5 +48,5 @@ pub fn cfg_window_attrib_platform(window_attrib: WindowAttributes) -> WindowAttr
     return cfg_window_attribute_macos(window_attrib);
 
     #[cfg(not(target_os = "macos"))]
-    compile_error!("cfg_window_platform is only implemented for macOS")
+    return panic!("cfg_window_platform is only implemented for macOS");
 }

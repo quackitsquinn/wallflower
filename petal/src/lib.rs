@@ -5,6 +5,7 @@ use std::{
 
 use anyhow::Context;
 use image::{ColorType, DynamicImage, GenericImage, GenericImageView};
+use w::rwh;
 use winit::{event_loop::ActiveEventLoop, window::Window};
 
 pub mod display_surface;
@@ -12,7 +13,6 @@ pub use display_surface::DisplaySurface;
 
 #[derive(Clone)]
 pub struct Graphics {
-    pub window: Arc<Window>,
     pub instance: w::Instance,
     pub adapter: w::Adapter,
     pub device: w::Device,
@@ -21,9 +21,46 @@ pub struct Graphics {
 }
 
 impl Graphics {
-    pub fn request_redraw(&self) -> anyhow::Result<()> {
-        self.window.request_redraw();
+    pub fn render_frame(&self) -> anyhow::Result<()> {
+        let mut enc = self.create_encoder("main");
+        let surf = self.display_surface.borrow();
+        let (surf_txt, view) = match surf
+            .current_texture_view()
+            .with_context(|| "failed to get view")?
+        {
+            Some(v) => v,
+            None => {
+                surf.reconfigure();
+                return Ok(());
+            }
+        };
+        let color_attachment = w::RenderPassColorAttachment {
+            view: &view,
+            resolve_target: None,
+            ops: w::Operations {
+                load: w::LoadOp::Clear(w::Color {
+                    r: 0.1,
+                    g: 0.2,
+                    b: 0.3,
+                    a: 1.0,
+                }),
+                store: w::StoreOp::Store,
+            },
+            depth_slice: None,
+        };
 
+        let pass = enc.begin_pass(
+            "main",
+            &RenderPassConfig {
+                color_attachments: vec![Some(color_attachment)],
+                ..Default::default()
+            },
+        );
+
+        drop(pass);
+
+        self.queue.submit(Some(enc.finish()));
+        self.queue.present(surf_txt);
         Ok(())
     }
 
@@ -79,12 +116,14 @@ impl<'a> RenderPassConfig<'a> {
     }
 }
 
-pub fn init_graphics(_: &ActiveEventLoop, wind: Window) -> anyhow::Result<Graphics> {
+pub fn init_graphics(
+    target: impl Into<w::SurfaceTarget<'static>>,
+    window_size: (u32, u32),
+) -> anyhow::Result<Graphics> {
+    // TODO: display handle will be important for multiple displays, but for now we can just use the default display.
     let instance = w::Instance::new(w::InstanceDescriptor::new_without_display_handle());
-    let window = Arc::new(wind);
-
     let surface = instance
-        .create_surface(window.clone())
+        .create_surface(target)
         .with_context(|| "failed to create surface")?;
 
     let adapter = instance.request_adapter(&w::RequestAdapterOptions {
@@ -97,11 +136,47 @@ pub fn init_graphics(_: &ActiveEventLoop, wind: Window) -> anyhow::Result<Graphi
     let device = adapter.request_device(&w::DeviceDescriptor::default());
     let (device, queue) = smol::block_on(device).with_context(|| "failed to request device")?;
 
-    let display_surface = DisplaySurface::init(&adapter, device.clone(), surface, window.clone())
+    let display_surface = DisplaySurface::init(&adapter, device.clone(), surface, window_size)
         .with_context(|| "failed to initialize display surface")?;
 
     let gfx = Graphics {
-        window,
+        instance,
+        adapter,
+        device,
+        queue,
+        display_surface: RefCell::new(display_surface),
+    };
+
+    Ok(gfx)
+}
+
+/// Initializes graphics using wgpu's unsafe surface creation. Used for Wayland layer support.
+///
+/// # Safety
+/// - See respective [`w::SurfaceTargetUnsafe`] variants for safety requirements.
+pub unsafe fn init_graphics_raw(
+    target: w::SurfaceTargetUnsafe,
+    surface_size: (u32, u32),
+) -> anyhow::Result<Graphics> {
+    // TODO: display handle will be important for multiple displays, but for now we can just use the default display.
+    let instance = w::Instance::new(w::InstanceDescriptor::new_without_display_handle());
+    let surface = unsafe { instance.create_surface_unsafe(target) }
+        .with_context(|| "failed to create surface")?;
+
+    let adapter = instance.request_adapter(&w::RequestAdapterOptions {
+        power_preference: w::PowerPreference::LowPower,
+        compatible_surface: Some(&surface),
+        ..Default::default()
+    });
+    let adapter = smol::block_on(adapter).with_context(|| "failed to request adapter")?;
+
+    let device = adapter.request_device(&w::DeviceDescriptor::default());
+    let (device, queue) = smol::block_on(device).with_context(|| "failed to request device")?;
+
+    let display_surface = DisplaySurface::init(&adapter, device.clone(), surface, surface_size)
+        .with_context(|| "failed to initialize display surface")?;
+
+    let gfx = Graphics {
         instance,
         adapter,
         device,

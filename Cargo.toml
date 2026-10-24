@@ -4,17 +4,22 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+petal = { path = "petal" }
+winit.workspace = true
+anyhow.workspace = true
+env_logger.workspace = true
+log.workspace = true
+
+[workspace.dependencies]
+winit = { version = "0.30.13", features = ["rwh_04"] }
 anyhow = "1.0.104"
 env_logger = "0.11.11"
 log = "0.4.34"
 smol = "2.0.2"
 w = { version = "30.0.1", package = "wgpu" }
-winit = { version = "0.30.13", features = ["rwh_04"] }
 glm = { package = "nalgebra-glm", version = "0.21.0" }
 image = "0.25.10"
 
-# only needed for macOS
-[target.'cfg(target_os = "macos")'.dependencies]
-objc2-core-graphics = "0.3.2"
-objc2 = "0.6.5"
-objc2-app-kit = "0.3.2"
+
+[workspace]
+members = ["backends/wayland", "petal"]
