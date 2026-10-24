@@ -20,8 +20,13 @@ pub struct Graphics {
     display_surface: RefCell<DisplaySurface>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct FrameInfo {
+    pub frame: u64,
+}
+
 impl Graphics {
-    pub fn render_frame(&self) -> anyhow::Result<()> {
+    pub fn render_frame(&self, info: &FrameInfo) -> anyhow::Result<()> {
         let mut enc = self.create_encoder("main");
         let surf = self.display_surface.borrow();
         let (surf_txt, view) = match surf
@@ -34,14 +39,16 @@ impl Graphics {
                 return Ok(());
             }
         };
+
+        let shade = ((info.frame as f64 * 0.1).sin() + glm::pi::<f64>()) / glm::two_pi::<f64>();
         let color_attachment = w::RenderPassColorAttachment {
             view: &view,
             resolve_target: None,
             ops: w::Operations {
                 load: w::LoadOp::Clear(w::Color {
-                    r: 0.1,
-                    g: 0.2,
-                    b: 0.3,
+                    r: shade,
+                    g: shade,
+                    b: shade,
                     a: 1.0,
                 }),
                 store: w::StoreOp::Store,
@@ -232,9 +239,13 @@ pub struct Viewport {
     pub size: glm::Vec2,
 }
 
+pub enum LayerContents {
+    Image(LoadedImage),
+}
+
 pub struct Layer {
     vp: Viewport,
-    img: Box<dyn ImageSource>,
+    contents: LayerContents,
     blend: w::BlendState,
 }
 

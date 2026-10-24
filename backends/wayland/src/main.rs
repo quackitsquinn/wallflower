@@ -1,20 +1,25 @@
-use std::{ptr::NonNull, todo};
+use std::{ptr::NonNull, time::Instant, todo};
 
 use anyhow::Context;
+use petal::FrameInfo;
 use smithay_client_toolkit::{
-    compositor::{CompositorHandler, CompositorState},
+    compositor::{CompositorHandler, CompositorState, FrameCallbackData},
     delegate_registry,
     output::{OutputHandler, OutputState},
     registry::{ProvidesRegistryState, RegistryState},
     registry_handlers,
     shell::{
         WaylandSurface,
-        wlr_layer::{Anchor, KeyboardInteractivity, Layer, LayerShell, LayerShellHandler},
+        wlr_layer::{
+            Anchor, KeyboardInteractivity, Layer, LayerShell, LayerShellHandler, LayerSurface,
+        },
     },
 };
 use w::rwh::{RawDisplayHandle, RawWindowHandle, WaylandDisplayHandle, WaylandWindowHandle};
 use wayland_client::{
-    Connection, Dispatch, Proxy, QueueHandle, globals::registry_queue_init, protocol::wl_registry,
+    Connection, Dispatch, Proxy, QueueHandle,
+    globals::registry_queue_init,
+    protocol::{wl_callback::WlCallback, wl_registry},
 };
 
 // The main function of our program
@@ -59,9 +64,11 @@ fn main() -> anyhow::Result<()> {
     let mut state = State {
         registry_state: RegistryState::new(&globals),
         output_state: OutputState::new(&globals, &qh),
+        layer: surf,
         should_close: false,
         gfx: unsafe { petal::init_graphics_raw(target, size) }
             .with_context(|| "failed to initialize graphics")?,
+        frame: 0,
     };
 
     loop {
@@ -81,7 +88,30 @@ struct State {
     registry_state: RegistryState,
     output_state: OutputState,
     should_close: bool,
+    layer: LayerSurface,
+    frame: u64,
     gfx: petal::Graphics,
+}
+
+impl State {
+    fn do_frame(&mut self, qh: &QueueHandle<Self>) {
+        let _cb = self.request_redraw(qh);
+
+        self.gfx
+            .render_frame(&FrameInfo { frame: self.frame })
+            .unwrap();
+        self.frame += 1;
+
+        self.layer.commit();
+    }
+
+    fn request_redraw(&mut self, qh: &QueueHandle<Self>) -> WlCallback {
+        // TODO: Investigate this function.. It has a return type that we just ignore, which is strange to me?
+        // However, it's what the smithay-client-toolkit example does, so I guess it's fine for now.
+        self.layer
+            .wl_surface()
+            .frame(qh, FrameCallbackData(self.layer.wl_surface().clone()))
+    }
 }
 
 impl CompositorHandler for State {
@@ -106,10 +136,13 @@ impl CompositorHandler for State {
     fn frame(
         &mut self,
         _conn: &Connection,
-        _qh: &QueueHandle<Self>,
-        _surface: &wayland_client::protocol::wl_surface::WlSurface,
+        qh: &QueueHandle<Self>,
+        surface: &wayland_client::protocol::wl_surface::WlSurface,
         _time: u32,
     ) {
+        if surface == self.layer.wl_surface() {
+            self.do_frame(qh);
+        }
     }
 
     fn surface_enter(
@@ -179,7 +212,7 @@ impl LayerShellHandler for State {
         configure: smithay_client_toolkit::shell::wlr_layer::LayerSurfaceConfigure,
         serial: u32,
     ) {
-        self.gfx.render_frame().unwrap()
+        self.do_frame(qh);
     }
 }
 

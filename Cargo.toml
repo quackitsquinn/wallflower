@@ -10,6 +10,12 @@ anyhow.workspace = true
 env_logger.workspace = true
 log.workspace = true
 
+# only needed for macOS
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2-core-graphics = "0.3.2"
+objc2 = "0.6.5"
+objc2-app-kit = "0.3.2"
+
 [workspace.dependencies]
 winit = { version = "0.30.13", features = ["rwh_04"] }
 anyhow = "1.0.104"

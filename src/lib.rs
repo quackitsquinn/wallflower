@@ -1,6 +1,6 @@
 use std::{rc::Rc, sync::Arc};
 
-use petal::Graphics;
+use petal::{FrameInfo, Graphics};
 use winit::{
     application::ApplicationHandler,
     dpi::PhysicalPosition,
@@ -15,6 +15,19 @@ mod plat;
 pub struct Wallflower {
     window: Option<Arc<Window>>,
     graphics: Option<Graphics>,
+    fi: FrameInfo,
+}
+
+impl Wallflower {
+    fn redraw(&mut self) {
+        if let Some(gfx) = &self.graphics {
+            gfx.render_frame(&self.fi).expect("redraw failed!");
+            self.window.as_ref().unwrap().request_redraw();
+            self.fi.frame += 1;
+        } else {
+            println!("Redraw requested but graphics not initialized!");
+        }
+    }
 }
 
 fn background_window_attribs(el: &ActiveEventLoop) -> WindowAttributes {
@@ -55,10 +68,9 @@ impl ApplicationHandler for Wallflower {
                 println!("Exiting!");
                 event_loop.exit();
             }
-            WindowEvent::RedrawRequested => match &self.graphics {
-                Some(gfx) => gfx.render_frame().expect("redraw failed!"),
-                None => println!("Redraw requested but graphics not initialized!"),
-            },
+            WindowEvent::RedrawRequested => {
+                self.redraw();
+            }
             _ => (),
         }
     }
