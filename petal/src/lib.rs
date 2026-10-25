@@ -4,12 +4,15 @@ use std::{
 };
 
 use anyhow::Context;
-use image::{ColorType, DynamicImage, GenericImage, GenericImageView};
+
 use w::rwh;
 use winit::{event_loop::ActiveEventLoop, window::Window};
 
 pub mod display_surface;
 pub use display_surface::DisplaySurface;
+
+use crate::img::LoadedImage;
+pub mod img;
 
 #[derive(Clone)]
 pub struct Graphics {
@@ -194,43 +197,6 @@ pub unsafe fn init_graphics_raw(
     Ok(gfx)
 }
 
-/// A clock that can be used to trigger updates at a certain frequency.
-///
-/// The accuracy of the clock is not guaranteed and is best effort. It should, on average, trigger at the requested frequency,
-/// but may be delayed or early due to system load or other factors.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Clock {
-    /// A clock that triggers with the global update clock. The speed of this clock is unspecified, so using delta time is recommended.
-    ///
-    /// This clock is probably the most energy efficient, as the global update clock will intentionally be throttled to save energy.
-    Global,
-    /// A clock that triggers at a certain frequency, starting at the next moment in time that is a multiple of the frequency.
-    Every {
-        /// The frequency at which the clock should trigger.
-        frequency: Duration,
-        /// Whether the clock should trigger immediately, or wait until the next multiple of the frequency.
-        wait: bool,
-    },
-    /// A clock that will trigger at the exact moment in time that is requested with `.0`. After that, the clock will be switched to `Clock::Stopped`.
-    Snoozed(Duration),
-    /// A clock that will not trigger at all.
-    Stopped,
-}
-
-pub struct RenderScheduler {
-    tracking_clock: Clock,
-    specified_clock: Clock,
-}
-
-impl RenderScheduler {
-    pub fn new(specified_clock: Clock) -> Self {
-        Self {
-            tracking_clock: specified_clock.clone(),
-            specified_clock,
-        }
-    }
-}
-
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Viewport {
     /// The base position of the viewport in our coordinate system (0, 0 is the top left corner of the window).
@@ -247,59 +213,4 @@ pub struct Layer {
     vp: Viewport,
     contents: LayerContents,
     blend: w::BlendState,
-}
-
-pub trait ImageSource {
-    fn next_image(&mut self) -> Option<w::Texture>;
-    fn current_image(&self) -> Option<&w::Texture>;
-}
-
-// These are all `Arc`s because we probably won't ever be writing to a LoadedImage. Down the line there *might*
-// be a feature or two that would require writing to an image, but that should probably be handled elsewhere.
-pub type LumaImage = image::ImageBuffer<image::Luma<u16>, Arc<[u16]>>;
-pub type LumaAlphaImage = image::ImageBuffer<image::LumaA<u16>, Arc<[u16]>>;
-pub type RgbImage = image::ImageBuffer<image::Rgb<f32>, Arc<[f32]>>;
-pub type RgbaImage = image::ImageBuffer<image::Rgba<f32>, Arc<[f32]>>;
-
-pub enum LoadedImage {
-    Luma(LumaImage),
-    LumaA(LumaAlphaImage),
-    Rgb(RgbImage),
-    RgbA(RgbaImage),
-}
-
-pub fn load_image_from_bytes(bytes: &[u8]) -> anyhow::Result<LoadedImage> {
-    let img = image::load_from_memory(bytes).with_context(|| "failed to load image from memory")?;
-    arc_image_from_dyn_image(img).with_context(|| "failed to convert image to Arc")
-}
-
-fn arc_image_from_dyn_image(img: DynamicImage) -> anyhow::Result<LoadedImage> {
-    fn conv_to_arc<P: image::Pixel, C: Deref<Target = [P::Subpixel]>>(
-        img: image::ImageBuffer<P, C>,
-    ) -> anyhow::Result<image::ImageBuffer<P, Arc<[P::Subpixel]>>> {
-        let (w, h) = img.dimensions();
-        let new_container = Arc::from(&*img.into_raw());
-        image::ImageBuffer::from_raw(w, h, new_container)
-            .with_context(|| "failed to create image buffer from raw data")
-    }
-
-    match img.color() {
-        ColorType::L8 | ColorType::L16 => {
-            let buf = conv_to_arc(img.into_luma16())?;
-            Ok(LoadedImage::Luma(buf))
-        }
-        ColorType::La8 | ColorType::La16 => {
-            let buf = conv_to_arc(img.into_luma_alpha16())?;
-            Ok(LoadedImage::LumaA(buf))
-        }
-        ColorType::Rgb8 | ColorType::Rgb16 | ColorType::Rgb32F => {
-            let buf = conv_to_arc(img.into_rgb32f())?;
-            Ok(LoadedImage::Rgb(buf))
-        }
-        ColorType::Rgba8 | ColorType::Rgba16 | ColorType::Rgba32F => {
-            let buf = conv_to_arc(img.into_rgba32f())?;
-            Ok(LoadedImage::RgbA(buf))
-        }
-        _ => anyhow::bail!("unsupported image color type: {:?}", img.color()),
-    }
 }

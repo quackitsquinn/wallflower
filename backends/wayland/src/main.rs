@@ -19,7 +19,7 @@ use w::rwh::{RawDisplayHandle, RawWindowHandle, WaylandDisplayHandle, WaylandWin
 use wayland_client::{
     Connection, Dispatch, Proxy, QueueHandle,
     globals::registry_queue_init,
-    protocol::{wl_callback::WlCallback, wl_registry},
+    protocol::{wl_callback::WlCallback, wl_output::WlOutput, wl_registry},
 };
 
 // The main function of our program
@@ -32,11 +32,13 @@ fn main() -> anyhow::Result<()> {
     let (globals, mut event_queue) =
         registry_queue_init(&conn).with_context(|| "registry_queue_init failed")?;
     let qh: QueueHandle<State> = event_queue.handle();
+    let layer_shell = LayerShell::bind(&globals, &qh).with_context(|| "LayerShell::bind failed")?;
     let compositor =
         CompositorState::bind(&globals, &qh).with_context(|| "CompositorState::bind failed")?;
-    let layer_shell = LayerShell::bind(&globals, &qh).with_context(|| "LayerShell::bind failed")?;
-    let surf = compositor.create_surface(&qh);
 
+    let output_state = OutputState::new(&globals, &qh);
+
+    let surf = compositor.create_surface(&qh);
     let surf = layer_shell.create_layer_surface(
         &qh,
         surf.clone(),
@@ -63,7 +65,7 @@ fn main() -> anyhow::Result<()> {
 
     let mut state = State {
         registry_state: RegistryState::new(&globals),
-        output_state: OutputState::new(&globals, &qh),
+        output_state,
         layer: surf,
         should_close: false,
         gfx: unsafe { petal::init_graphics_raw(target, size) }

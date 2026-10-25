@@ -2203,9 +2203,6 @@ dependencies = [
  "anyhow",
  "image",
  "nalgebra-glm",
- "objc2 0.6.5",
- "objc2-app-kit 0.3.2",
- "objc2-core-graphics",
  "smol",
  "wgpu",
  "winit",
@@ -3191,7 +3188,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "wallflower"
+name = "wallflower_bg"
 version = "0.1.0"
 dependencies = [
  "anyhow",

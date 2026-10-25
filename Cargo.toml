@@ -1,20 +1,5 @@
-[package]
-name = "wallflower"
-version = "0.1.0"
+[workspace.package]
 edition = "2024"
-
-[dependencies]
-petal = { path = "petal" }
-winit.workspace = true
-anyhow.workspace = true
-env_logger.workspace = true
-log.workspace = true
-
-# only needed for macOS
-[target.'cfg(target_os = "macos")'.dependencies]
-objc2-core-graphics = "0.3.2"
-objc2 = "0.6.5"
-objc2-app-kit = "0.3.2"
 
 [workspace.dependencies]
 winit = { version = "0.30.13", features = ["rwh_04"] }
@@ -26,6 +11,5 @@ w = { version = "30.0.1", package = "wgpu" }
 glm = { package = "nalgebra-glm", version = "0.21.0" }
 image = "0.25.10"
 
-
 [workspace]
-members = ["backends/wayland", "petal"]
+members = ["backends/wayland", "petal", "wallflower_bg"]

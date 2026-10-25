@@ -12,8 +12,3 @@ anyhow.workspace = true
 smol.workspace = true
 glm.workspace = true
 
-# only needed for macOS
-[target.'cfg(target_os = "macos")'.dependencies]
-objc2-core-graphics = "0.3.2"
-objc2 = "0.6.5"
-objc2-app-kit = "0.3.2"

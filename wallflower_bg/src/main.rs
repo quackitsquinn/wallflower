@@ -1,4 +1,4 @@
-use wallflower::Wallflower;
+use wallflower_bg::Wallflower;
 use winit::event_loop::{ControlFlow, EventLoop};
 
 fn main() {
