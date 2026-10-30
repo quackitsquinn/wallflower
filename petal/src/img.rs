@@ -13,9 +13,13 @@ pub type RgbaImage = image::ImageBuffer<image::Rgba<f32>, Arc<[f32]>>;
 /// An enum that represents an image that has been loaded into memory. The image is stored as an `Arc` for fast cloning
 #[derive(Debug, Clone)]
 pub enum LoadedImage {
+    /// A grayscale 16-bit image. 
     Luma(LumaImage),
+    /// A grayscale 16-bit image with an alpha channel.
     LumaA(LumaAlphaImage),
+    /// A 32-bit floating point RGB image.
     Rgb(RgbImage),
+    /// A 32-bit floating point RGBA image.
     RgbA(RgbaImage),
 }
 

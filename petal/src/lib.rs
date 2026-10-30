@@ -11,8 +11,9 @@ use winit::{event_loop::ActiveEventLoop, window::Window};
 pub mod display_surface;
 pub use display_surface::DisplaySurface;
 
-use crate::img::LoadedImage;
+pub mod composite;
 pub mod img;
+pub use crate::img::LoadedImage;
 
 #[derive(Clone)]
 pub struct Graphics {
@@ -206,6 +207,7 @@ pub struct Viewport {
 }
 
 pub enum LayerContents {
+    SolidColor(w::Color),
     Image(LoadedImage),
 }
 
