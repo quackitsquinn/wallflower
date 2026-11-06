@@ -1,6 +1,6 @@
-use std::{rc::Rc, sync::Arc};
+use std::{rc::Rc, sync::Arc, time::Duration};
 
-use petal::{FrameInfo, Graphics};
+use petal::{FrameInfo, Graphics, w::SurfaceTarget};
 use winit::{
     application::ApplicationHandler,
     dpi::PhysicalPosition,
@@ -10,68 +10,25 @@ use winit::{
 };
 
 mod plat;
+pub mod runner;
 
-#[derive(Default)]
 pub struct Wallflower {
-    window: Option<Arc<Window>>,
-    graphics: Option<Graphics>,
-    fi: FrameInfo,
+    gfx: Graphics,
 }
 
 impl Wallflower {
-    fn redraw(&mut self) {
-        if let Some(gfx) = &self.graphics {
-            gfx.render_frame(&self.fi).expect("redraw failed!");
-            self.window.as_ref().unwrap().request_redraw();
-            self.fi.frame += 1;
-        } else {
-            println!("Redraw requested but graphics not initialized!");
-        }
-    }
-}
-
-fn background_window_attribs(el: &ActiveEventLoop) -> WindowAttributes {
-    let mut wa = WindowAttributes::default()
-        .with_position(PhysicalPosition::new(0, 0))
-        .with_window_level(WindowLevel::AlwaysOnBottom)
-        .with_resizable(false);
-
-    let monitor = el.primary_monitor().unwrap();
-    let size = monitor.size();
-    wa = wa.with_inner_size(size);
-    wa = plat::cfg_window_attrib_platform(wa);
-
-    wa
-}
-
-impl ApplicationHandler for Wallflower {
-    fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-        let window = event_loop
-            .create_window(background_window_attribs(event_loop))
-            .unwrap();
-        plat::cfg_window_platform(&window);
-        window.set_outer_position(PhysicalPosition::new(0, 0));
-        let window = Arc::new(window);
-        self.graphics =
-            Some(petal::init_graphics(window.clone(), window.inner_size().into()).unwrap());
-        self.window = Some(window);
+    pub fn new<S>(target: S) -> anyhow::Result<Self>
+    where
+        S: Into<SurfaceTarget<'static>>,
+    {
+        let gfx = petal::init_graphics(target, (1000, 1000))?;
+        Ok(Self { gfx })
     }
 
-    fn window_event(
-        &mut self,
-        event_loop: &ActiveEventLoop,
-        _window_id: WindowId,
-        event: WindowEvent,
-    ) {
-        match event {
-            WindowEvent::CloseRequested => {
-                println!("Exiting!");
-                event_loop.exit();
-            }
-            WindowEvent::RedrawRequested => {
-                self.redraw();
-            }
-            _ => (),
-        }
+    pub fn render(&self) -> Duration {
+        let then = std::time::Instant::now();
+        self.gfx.render_frame(&FrameInfo { frame: 0 }).unwrap();
+
+        Duration::from_secs_f32(1.0 / 60.0).saturating_sub(then.elapsed())
     }
 }

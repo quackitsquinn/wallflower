@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use w::PresentMode;
 use winit::window::Window;
 
 #[derive(Clone)]
@@ -29,7 +30,7 @@ impl DisplaySurface {
             format: surface_format,
             width: size.0,
             height: size.1,
-            present_mode: surface_caps.present_modes[0],
+            present_mode: PresentMode::AutoVsync,
             alpha_mode: surface_caps.alpha_modes[0],
             view_formats: vec![],
             desired_maximum_frame_latency: 2,
@@ -56,8 +57,9 @@ impl DisplaySurface {
             | w::CurrentSurfaceTexture::Occluded
             | w::CurrentSurfaceTexture::Validation => Ok(None),
             w::CurrentSurfaceTexture::Suboptimal(txt) => {
+                drop(txt);
                 self.reconfigure();
-                Ok(Some(txt))
+                Ok(None)
             }
             w::CurrentSurfaceTexture::Outdated | w::CurrentSurfaceTexture::Lost => {
                 self.reconfigure();

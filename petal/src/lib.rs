@@ -5,8 +5,7 @@ use std::{
 
 use anyhow::Context;
 
-use w::rwh;
-use winit::{event_loop::ActiveEventLoop, window::Window};
+pub use w::{self, rwh};
 
 pub mod display_surface;
 pub use display_surface::DisplaySurface;
