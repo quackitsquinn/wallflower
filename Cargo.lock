@@ -3198,6 +3198,8 @@ dependencies = [
  "objc2-app-kit 0.3.2",
  "objc2-core-graphics",
  "petal",
+ "smithay-client-toolkit 0.21.1",
+ "wayland-client",
  "winit",
 ]
 
@@ -3264,18 +3266,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "23f0c9c52aa7cd7d77769a4cfe2a9adb1b331f489a41d912ce14513d5ab995c6"
 dependencies = [
  "unicode-ident",
-]
-
-[[package]]
-name = "wayland"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "env_logger",
- "petal",
- "smithay-client-toolkit 0.21.1",
- "wayland-client",
- "wgpu",
 ]
 
 [[package]]

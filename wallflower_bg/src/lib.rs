@@ -1,12 +1,8 @@
-use std::{rc::Rc, sync::Arc, time::Duration};
+use std::time::Duration;
 
-use petal::{FrameInfo, Graphics, w::SurfaceTarget};
-use winit::{
-    application::ApplicationHandler,
-    dpi::PhysicalPosition,
-    event::WindowEvent,
-    event_loop::ActiveEventLoop,
-    window::{Window, WindowAttributes, WindowId, WindowLevel},
+use petal::{
+    FrameInfo, Graphics,
+    w::{SurfaceTarget, SurfaceTargetUnsafe},
 };
 
 mod plat;
@@ -22,6 +18,16 @@ impl Wallflower {
         S: Into<SurfaceTarget<'static>>,
     {
         let gfx = petal::init_graphics(target, (1000, 1000))?;
+        Ok(Self { gfx })
+    }
+
+    /// Creates a new Wallflower from the given unsafe surface target.
+    ///
+    /// # Safety
+    ///
+    /// `target` must be valid for the current platform.
+    pub unsafe fn new_unsafe_surface(target: SurfaceTargetUnsafe) -> anyhow::Result<Self> {
+        let gfx = unsafe { petal::init_graphics_raw(target, (1000, 1000)) }?;
         Ok(Self { gfx })
     }
 

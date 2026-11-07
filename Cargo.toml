@@ -12,4 +12,4 @@ glm = { package = "nalgebra-glm", version = "0.21.0" }
 image = "0.25.10"
 
 [workspace]
-members = ["backends/wayland", "petal", "wallflower_bg"]
+members = ["petal", "wallflower_bg"]
